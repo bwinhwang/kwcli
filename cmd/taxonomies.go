@@ -10,17 +10,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Project struct (adjust field types if needed)
-type Project struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Creator     string `json:"creator"`
-	Description string `json:"description"`
+type Taxonomy struct {
+	Name     string `json:"name"`
+	IsCustom bool   `json:"is_custom"`
 }
 
-var projectsCmd = &cobra.Command{
-	Use:   "projects",
-	Short: "Retrieve list of projects (and optionally streams)",
+var taxonomiesCmd = &cobra.Command{
+	Use:   "taxonomies",
+	Short: "Retrieve the list of taxonomy terms for a project.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create a map to store the parameters
 		paramMap := make(map[string]interface{})
@@ -29,34 +26,34 @@ var projectsCmd = &cobra.Command{
 				paramMap[flag.Name] = flag.Value.String()
 			}
 		})
-		paramMap["action"] = "projects"
+		paramMap["action"] = "taxonomies"
 
 		client := getKWClientInstance()
 		lines, err := client.Execute(paramMap)
-
+		//fmt.Println(lines)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		var projects []Project
+		var taxonomies []Taxonomy
 		for _, line := range lines {
-			var project Project
+			var taxonomy Taxonomy
 			if len(strings.TrimSpace(line)) == 0 {
 				continue // Skip to the next line if is empty
 			}
-			err := json.Unmarshal([]byte(line), &project)
+			err := json.Unmarshal([]byte(line), &taxonomy)
 			if err != nil {
 				// ... handle error ...
-				fmt.Println("Error parsing project:", err)
+				fmt.Println("Error parsing taxonomy:", err)
 				fmt.Println(line)
 				continue // Skip to the next line if there's a parsing error
 			}
-			projects = append(projects, project)
+			taxonomies = append(taxonomies, taxonomy)
 		}
 
 		// Marshall the entire data as an array of objects
-		jsonData, err := json.Marshal(projects)
+		jsonData, err := json.Marshal(taxonomies)
 		if err != nil {
 			// ... handle error ...
 			fmt.Println("Error marshalling JSON:", err)
@@ -73,8 +70,13 @@ var projectsCmd = &cobra.Command{
 }
 
 func init() {
-	projectsCmd.Flags().BoolP("include_streams", "s", false, "Retrieve streams as well")
-	definedFlags["include_streams"] = true
+	// Required flags
+	taxonomiesCmd.Flags().StringP("project", "p", "", "project name")
+	taxonomiesCmd.MarkFlagRequired("project")
 
-	rootCmd.AddCommand(projectsCmd)
+	// Record the flag in definedFlags
+	definedFlags["project"] = true
+
+	// Assuming you have a 'rootCmd' defined in your main
+	rootCmd.AddCommand(taxonomiesCmd)
 }

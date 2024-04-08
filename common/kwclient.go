@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,11 @@ type KWClient struct {
 	httpClient *http.Client
 	user       string
 	token      string
+}
+
+type KWResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
 }
 
 var validTokenPattern = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
@@ -39,8 +45,20 @@ func (client *KWClient) makeAPIRequest(method, endpoint string, data url.Values)
 }
 */
 
-func (client *KWClient) Echo(data map[string]interface{}) ([]string, error) {
+func (r *KWResponse) Validate() error {
+	if r.Status == 0 {
+		return fmt.Errorf("missing 'status' field in response")
+	}
+	if r.Message == "" {
+		return fmt.Errorf("missing 'message' field in response")
+	}
+	// ... Add more checks if needed ...
+	return nil
+}
 
+func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
+
+	var kwresp KWResponse
 	if client.user != "" {
 		data["user"] = client.user
 	}
@@ -68,8 +86,22 @@ func (client *KWClient) Echo(data map[string]interface{}) ([]string, error) {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 	//fmt.Println(string(body))
+	lines := strings.Split(string(body), "\n")
+	first := lines[0]
+	//fmt.Println(first)
+	err = json.Unmarshal([]byte(first), &kwresp)
 
-	return strings.Split(string(body), "\n"), nil
+	if err != nil {
+		return nil, err
+	}
+
+	err = kwresp.Validate()
+
+	if err != nil {
+		return lines, nil
+	}
+
+	return nil, fmt.Errorf("status: %d, message: %s", kwresp.Status, kwresp.Message)
 }
 
 func constructFields(data map[string]interface{}) string {

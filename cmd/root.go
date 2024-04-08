@@ -11,6 +11,8 @@ import (
 // ... (Your other imports)
 var definedFlags = make(map[string]bool)
 
+var outputFile string
+
 var GlobalKWClient *common.KWClient // Declare the global variable
 
 // ... your other commands ...
@@ -36,4 +38,9 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+
+	rootCmd.PersistentFlags().StringVar(&outputFile, "output", "result.json", "The output file for results")
 }

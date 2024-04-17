@@ -57,7 +57,7 @@ func fetchDataCommand(cmd *cobra.Command, action string, resultStruct interface{
 
 		err := json.Unmarshal([]byte(line), resultValue.Interface())
 		if err != nil {
-			return nil, fmt.Errorf("error parsing JSON: %v - Data: %s", err, line)
+			return nil, fmt.Errorf("error parsing JSON: %v - line: %s", err, line)
 		}
 
 		// Append the unmarshalled data (You'll need to adjust how the data is stored)

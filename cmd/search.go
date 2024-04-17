@@ -2,10 +2,26 @@ package cmd
 
 import (
 	"binhong/kwcli/common"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+type SummaryLine struct {
+	Summary SearchSummary `json:"summary"`
+}
+
+type SearchSummary struct {
+	Query    string   `json:"query"`
+	Project  string   `json:"project"`
+	View     string   `json:"view"`
+	Limit    int      `json:"limit"`
+	Total    int      `json:"total"`
+	Warnings []string `json:"warnings"` // Or a more descriptive type if warnings have structure
+}
 
 type Issue struct {
 	ID               int           `json:"id"`
@@ -32,17 +48,58 @@ var searchCmd = &cobra.Command{
 	Short: "Retrieve the list of detected issues.",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var i Issue
-		results, err := fetchDataCommand(cmd, "search", &i) // Placeholder
+		paramMap := make(map[string]interface{})
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if definedFlags[flag.Name] {
+				paramMap[flag.Name] = flag.Value.String()
+			}
+		})
+		paramMap["action"] = "search"
+
+		client := getKWClientInstance()
+		lines, err := client.Execute(paramMap)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("error parsing JSON: %s ", err)
 			return
 		}
 
-		err = writeJSONToFile(results, outputFile)
-		if err != nil {
-			fmt.Println(err)
+		var results []interface{}
+		var lastline string
+		isSummary, _ := cmd.Flags().GetBool("summary")
+		//fmt.Println(lines[len(lines)-2])
+		// Iterate through results and unmarshal
+		for _, line := range lines {
+			if len(strings.TrimSpace(line)) == 0 {
+				continue
+			}
+			var result Issue
+			err := json.Unmarshal([]byte(line), &result)
+			if err != nil {
+				fmt.Printf("error parsing JSON: %s - line: %s", err, line)
+			}
+			if isSummary {
+				lastline = line
+			}
+			// Append the unmarshalled data (You'll need to adjust how the data is stored)
+			results = append(results, result)
 		}
+		if isSummary {
+			var summaryline SummaryLine
+			//fmt.Println(lastline)
+			err := json.Unmarshal([]byte(lastline), &summaryline)
+			if err == nil {
+				summary := summaryline.Summary
+				results = append(results, summary)
+				fmt.Println("Project:", summary.Project)
+				fmt.Println("Query:", summary.Query)
+				fmt.Println("View:", summary.View)
+				fmt.Println("Limit:", summary.Limit)
+				fmt.Println("Total Issues:", summary.Total)
+			}
+		}
+
+		writeJSONToFile(results, outputFile)
+
 	},
 }
 

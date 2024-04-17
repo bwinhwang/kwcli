@@ -1,10 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // ... (Your other imports)
@@ -13,19 +10,7 @@ var deleteProjectCmd = &cobra.Command{
 	Use:   "delete_project",
 	Short: "Delete a project.",
 	Run: func(cmd *cobra.Command, args []string) {
-		paramMap := make(map[string]interface{})
-		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if definedFlags[flag.Name] { // Filter here!
-				paramMap[flag.Name] = flag.Value.String()
-			}
-		})
-		paramMap["action"] = "delete_project"
-
-		client := getKWClientInstance()
-		_, err := client.Execute(paramMap)
-		if err != nil {
-			fmt.Println(err)
-		}
+		actionOrientedCommand(cmd, "delete_project")
 	},
 }
 

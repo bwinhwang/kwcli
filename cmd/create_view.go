@@ -1,29 +1,14 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var createViewCmd = &cobra.Command{
 	Use:   "create_view",
 	Short: "Create a view for a project.",
 	Run: func(cmd *cobra.Command, args []string) {
-		// 1. Get all flag values
-		// Create a map to store the parameters
-		paramMap := make(map[string]interface{})
-		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if definedFlags[flag.Name] { // Filter here!
-				paramMap[flag.Name] = flag.Value.String()
-			}
-		})
-
-		// Access and use your map
-		for name, value := range paramMap {
-			fmt.Printf("Parameter: %s, Value: %s\n", name, value)
-		}
+		actionOrientedCommand(cmd, "create_view")
 	},
 }
 

@@ -75,6 +75,7 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.httpClient.Do(req)
+
 	if err != nil {
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
@@ -86,14 +87,21 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 	//fmt.Println(string(body))
+	if string(body) == "" {
+		//action succeeds without response
+		return nil, nil
+	}
+
 	lines := strings.Split(string(body), "\n")
 	first := lines[0]
 	//fmt.Println(first)
 	err = json.Unmarshal([]byte(first), &kwresp)
 
-	if err != nil {
-		return nil, err
-	}
+	/*
+		if err != nil {
+			return nil, err
+		}
+	*/
 
 	err = kwresp.Validate()
 
@@ -109,7 +117,9 @@ func constructFields(data map[string]interface{}) string {
 	fields := url.Values{}
 	for name, value := range data {
 		//fmt.Printf("Parameter: %s, Value: %s\n", name, value)
-		fields.Add(name, value.(string))
+		if value.(string) != "" {
+			fields.Add(name, value.(string))
+		}
 	}
 
 	return url.Values(fields).Encode()

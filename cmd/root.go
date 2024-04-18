@@ -66,6 +66,50 @@ func fetchDataCommand(cmd *cobra.Command, action string, resultStruct interface{
 
 	return results, nil
 }
+
+func fetchDataCommand2(cmd *cobra.Command, action string, results *[]interface{}, resultType interface{}) error {
+	paramMap := make(map[string]interface{})
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		if definedFlags[flag.Name] {
+			paramMap[flag.Name] = flag.Value.String()
+		}
+	})
+	paramMap["action"] = action
+
+	client := getKWClientInstance()
+	lines, err := client.Execute(paramMap)
+	if err != nil {
+		return err
+	}
+
+	// Check and cast resultStruct
+
+	// Ensure resultStruct is a pointer to a struct
+	objType := reflect.TypeOf(resultType)
+	if objType.Kind() != reflect.Ptr || objType.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("resultStruct must be a pointer to a struct")
+	}
+
+	// Iterate through results and unmarshal
+	// Iterate through results and unmarshal
+	for _, line := range lines {
+		if len(strings.TrimSpace(line)) == 0 {
+			continue
+		}
+		//fmt.Println(line)
+		// Create a new instance of the desired type using reflection
+		resultValue := reflect.New(objType.Elem())
+
+		err := json.Unmarshal([]byte(line), resultValue.Interface())
+		if err != nil {
+			return fmt.Errorf("error parsing JSON: %v - line: %s", err, line)
+		}
+		//fmt.Println(resultValue.Elem().Interface())
+
+		*results = append(*results, resultValue.Elem().Interface())
+	}
+	return nil
+}
 func actionOrientedCommand(cmd *cobra.Command, action string) error {
 	paramMap := make(map[string]interface{})
 	cmd.Flags().VisitAll(func(flag *pflag.Flag) {

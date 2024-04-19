@@ -85,6 +85,8 @@ var searchCmd = &cobra.Command{
 		}
 		if isSummary {
 			var summaryline SummaryLine
+			// remove the last one
+			results = results[:len(results)-1]
 			//fmt.Println(lastline)
 			err := json.Unmarshal([]byte(lastline), &summaryline)
 			if err == nil {

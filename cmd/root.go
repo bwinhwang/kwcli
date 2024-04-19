@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -137,9 +138,21 @@ func writeJSONToFile(data interface{}, filename string) error {
 		return fmt.Errorf("error marshalling JSON: %v", err)
 	}
 
-	err = os.WriteFile(filename, jsonData, 0644)
+	var outputWriter io.Writer
+	if filename == "-" {
+		outputWriter = os.Stdout
+	} else {
+		file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("error opening file: %v", err)
+		}
+		defer file.Close() // Ensure file closure
+		outputWriter = file
+	}
+
+	_, err = outputWriter.Write(jsonData)
 	if err != nil {
-		return fmt.Errorf("error writing to file: %v", err)
+		return fmt.Errorf("error writing output: %v", err)
 	}
 
 	return nil
@@ -262,5 +275,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cmdUser, "user", "", "Klocwork user")
 	rootCmd.PersistentFlags().StringVar(&cmdToken, "token", "", "Klocwork password")
 	rootCmd.PersistentFlags().StringVar(&cmdURL, "url", "", "Klocwork base URL (e.g., http://server:8080)")
-	rootCmd.PersistentFlags().StringVar(&outputFile, "output", "result.json", "The output file for results")
+	rootCmd.PersistentFlags().StringVarP(&outputFile, "output", "O", "result.json", "The output file for results")
 }

@@ -92,11 +92,7 @@ var searchCmd = &cobra.Command{
 			if err == nil {
 				summary := summaryline.Summary
 				writeJSONToFile(summary, "search_summary.json")
-				fmt.Println("Project:", summary.Project)
-				fmt.Println("Query:", summary.Query)
-				fmt.Println("View:", summary.View)
-				fmt.Println("Limit:", summary.Limit)
-				fmt.Println("Total Issues:", summary.Total)
+				writeJSONToFile(summary, "-")
 			}
 
 		}

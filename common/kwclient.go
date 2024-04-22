@@ -95,7 +95,8 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 	lines := strings.Split(string(body), "\n")
 	first := lines[0]
 	//fmt.Println(first)
-	err = json.Unmarshal([]byte(first), &kwresp)
+
+	_ = json.Unmarshal([]byte(first), &kwresp)
 
 	/*
 		if err != nil {

@@ -27,12 +27,8 @@ var cmdURL string
 
 var GlobalKWClient *common.KWClient // Declare the global variable
 func fetchDataCommand(cmd *cobra.Command, action string, resultStruct interface{}) ([]interface{}, error) {
-	paramMap := make(map[string]interface{})
-	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-		if definedFlags[flag.Name] {
-			paramMap[flag.Name] = flag.Value.String()
-		}
-	})
+	paramMap := collectOptionsAsMap(cmd)
+
 	paramMap["action"] = action
 
 	client := getKWClientInstance()
@@ -69,12 +65,7 @@ func fetchDataCommand(cmd *cobra.Command, action string, resultStruct interface{
 }
 
 func fetchDataCommand2(cmd *cobra.Command, action string, results *[]interface{}, resultType interface{}) error {
-	paramMap := make(map[string]interface{})
-	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-		if definedFlags[flag.Name] {
-			paramMap[flag.Name] = flag.Value.String()
-		}
-	})
+	paramMap := collectOptionsAsMap(cmd)
 	paramMap["action"] = action
 
 	client := getKWClientInstance()
@@ -111,16 +102,31 @@ func fetchDataCommand2(cmd *cobra.Command, action string, results *[]interface{}
 	}
 	return nil
 }
-func actionOrientedCommand(cmd *cobra.Command, action string) error {
+func collectOptionsAsMap(cmd *cobra.Command) map[string]interface{} {
 	paramMap := make(map[string]interface{})
 	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 		if definedFlags[flag.Name] {
-			paramMap[flag.Name] = flag.Value.String()
 			if cmd.Flags().Changed(flag.Name) { // applied flag specfied by cmdline
-				paramMap[flag.Name] = flag.Value.String()
+				switch flag.Value.Type() {
+				case "string":
+					paramMap[flag.Name] = flag.Value.String()
+					//fmt.Println("string ", flag.Name, flag.Value.String())
+				case "stringSlice":
+					stringValues, _ := cmd.Flags().GetStringSlice(flag.Name)
+					joined := strings.Join(stringValues, ",")
+					paramMap[flag.Name] = joined
+				default:
+					fmt.Printf("Unsupported type: %s, %s", flag.Value.Type(), flag.Name)
+				}
 			}
 		}
 	})
+	return paramMap
+
+}
+func actionOrientedCommand(cmd *cobra.Command, action string) error {
+
+	paramMap := collectOptionsAsMap(cmd)
 	paramMap["action"] = action
 
 	client := getKWClientInstance()
@@ -275,5 +281,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cmdUser, "user", "", "Klocwork user")
 	rootCmd.PersistentFlags().StringVar(&cmdToken, "token", "", "Klocwork password")
 	rootCmd.PersistentFlags().StringVar(&cmdURL, "url", "", "Klocwork base URL (e.g., http://server:8080)")
-	rootCmd.PersistentFlags().StringVarP(&outputFile, "output", "O", "result.json", "The output file for results")
+	rootCmd.PersistentFlags().StringVarP(&outputFile, "output", "O", "result.json", "The output file for results, '-' means stdout")
 }

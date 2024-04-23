@@ -66,7 +66,11 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 		data["ltoken"] = client.token
 	}
 
-	s := constructFields(data)
+	//fmt.Println(data)
+	s, ok := constructFields(data)
+	if !ok {
+		return nil, fmt.Errorf("constructFields fail due to unsupport types")
+	}
 	//fmt.Println(s)
 	req, err := http.NewRequest(http.MethodPost, client.baseURL, bytes.NewReader([]byte(s)))
 	if err != nil {
@@ -113,15 +117,12 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 	return nil, fmt.Errorf("status: %d, message: %s", kwresp.Status, kwresp.Message)
 }
 
-func constructFields(data map[string]interface{}) string {
+func constructFields(data map[string]interface{}) (string, bool) {
 
 	fields := url.Values{}
 	for name, value := range data {
-		//fmt.Printf("Parameter: %s, Value: %s\n", name, value)
-		if value.(string) != "" {
-			fields.Add(name, value.(string))
-		}
+		fields.Add(name, value.(string))
 	}
 
-	return url.Values(fields).Encode()
+	return url.Values(fields).Encode(), true
 }

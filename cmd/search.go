@@ -109,7 +109,7 @@ func init() {
 
 	// Optional flags
 	searchCmd.Flags().StringP("query", "q", "", "search query...")
-	searchCmd.Flags().StringP("view", "", "", "view name")
+	searchCmd.Flags().StringP("view", "", "*default*", "view name")
 	searchCmd.Flags().IntP("limit", "", 1000, "search result limit")
 	searchCmd.Flags().BoolP("summary", "", false, "include summary record to output stream")
 

@@ -1,26 +1,64 @@
 package cmd
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"binhong/kwcli/common"
+	"io"
+	"os"
+	"strings"
 	"testing"
 )
 
-func TestGetProjects(t *testing.T) {
-	mockResponse := `[{"id": "test-project", "name": "Example"}]` // Sample JSON
+func Test_projectsCommand(t *testing.T) {
+	// 设置 mock 客户端
+	mockClient := &common.MockKWClient{
+		ExecuteFunc: func(data map[string]interface{}) ([]string, error) {
+			return []string{
+				`{"id": "proj1", "name": "TestProject"}`,
+			}, nil
+		},
+	}
+	SetKWClientInstance(mockClient)
+	defer ResetKWClientInstance()
 
-	// Create a test server
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(mockResponse))
-	}))
-	defer ts.Close()
+	// 保存原始 outputFile 并设置为 stdout
+	origOutputFile := outputFile
+	outputFile = "-"
+	defer func() { outputFile = origOutputFile }()
 
-	// Temporarily modify your KWClient or command to point to the test server's URL
+	testCases := []struct {
+		name           string
+		args           []string
+		expectedError  bool
+		expectedOutput string // For basic output checks
+	}{
+		{"no project flag", nil, false, "TestProject"},
+		{"include streams flag", []string{"--include_streams"}, false, "TestProject"},
+	}
 
-	// ... rest of your test setup ...
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Capture the output
+			old := os.Stdout // Keep the original stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	// Run your projects command
-	// ...
+			// 通过 rootCmd 执行 projects 子命令
+			args := append([]string{"projects"}, tc.args...)
+			rootCmd.SetArgs(args)
+			err := rootCmd.Execute()
 
-	// Assertions (check if the projects array is parsed correctly)
+			w.Close()
+			out, _ := io.ReadAll(r)
+			os.Stdout = old // Restore stdout
+
+			if (err != nil) != tc.expectedError {
+				t.Errorf("Expected error: %v, got: %v", tc.expectedError, err)
+			}
+
+			// Basic output check
+			if !strings.Contains(string(out), tc.expectedOutput) {
+				t.Errorf("Expected output to contain: %s, got: %s", tc.expectedOutput, out)
+			}
+		})
+	}
 }

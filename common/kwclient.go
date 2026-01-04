@@ -3,7 +3,6 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -47,10 +46,10 @@ func (client *KWClient) makeAPIRequest(method, endpoint string, data url.Values)
 
 func (r *KWResponse) Validate() error {
 	if r.Status == 0 {
-		return fmt.Errorf("missing 'status' field in response")
+		return NewParseError("missing 'status' field in response", nil)
 	}
 	if r.Message == "" {
-		return fmt.Errorf("missing 'message' field in response")
+		return NewParseError("missing 'message' field in response", nil)
 	}
 	// ... Add more checks if needed ...
 	return nil
@@ -69,26 +68,26 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 	//fmt.Println(data)
 	s, ok := constructFields(data)
 	if !ok {
-		return nil, fmt.Errorf("constructFields fail due to unsupport types")
+		return nil, NewParseError("constructFields fail due to unsupport types", nil)
 	}
 	//fmt.Println(s)
 	req, err := http.NewRequest(http.MethodPost, client.baseURL, bytes.NewReader([]byte(s)))
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
+		return nil, NewNetworkError("error creating request", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.httpClient.Do(req)
 
 	if err != nil {
-		return nil, fmt.Errorf("error sending request: %w", err)
+		return nil, NewNetworkError("error sending request", err)
 	}
 	defer resp.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
+		return nil, NewNetworkError("error reading response body", err)
 	}
 	//fmt.Println(string(body))
 	if string(body) == "" {
@@ -114,7 +113,7 @@ func (client *KWClient) Execute(data map[string]interface{}) ([]string, error) {
 		return lines, nil
 	}
 
-	return nil, fmt.Errorf("status: %d, message: %s", kwresp.Status, kwresp.Message)
+	return nil, NewAPIError(kwresp.Status, kwresp.Message)
 }
 
 func constructFields(data map[string]interface{}) (string, bool) {

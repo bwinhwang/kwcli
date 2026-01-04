@@ -25,7 +25,7 @@ var cmdUser string
 var cmdToken string
 var cmdURL string
 
-var GlobalKWClient *common.KWClient // Declare the global variable
+var GlobalKWClient common.KWExecutor // Declare the global variable (using interface)
 func fetchDataCommand(cmd *cobra.Command, action string, resultStruct interface{}) ([]interface{}, error) {
 	paramMap := collectOptionsAsMap(cmd)
 
@@ -110,19 +110,24 @@ func collectOptionsAsMap(cmd *cobra.Command) map[string]interface{} {
 				switch flag.Value.Type() {
 				case "string":
 					paramMap[flag.Name] = flag.Value.String()
-					//fmt.Println("string ", flag.Name, flag.Value.String())
 				case "stringSlice":
 					stringValues, _ := cmd.Flags().GetStringSlice(flag.Name)
 					joined := strings.Join(stringValues, ",")
 					paramMap[flag.Name] = joined
+				case "bool":
+					boolValue, _ := cmd.Flags().GetBool(flag.Name)
+					if boolValue {
+						paramMap[flag.Name] = "true"
+					}
+				case "int":
+					paramMap[flag.Name] = flag.Value.String()
 				default:
-					fmt.Printf("Unsupported type: %s, %s", flag.Value.Type(), flag.Name)
+					fmt.Printf("Unsupported type: %s, %s\n", flag.Value.Type(), flag.Name)
 				}
 			}
 		}
 	})
 	return paramMap
-
 }
 func actionOrientedCommand(cmd *cobra.Command, action string) error {
 
@@ -241,10 +246,10 @@ func LoadKWauthInfo() (string, string, string, error) {
 	return url, username, token, err
 }
 
-// The getKWClientInstance function
-func getKWClientInstance() *common.KWClient {
+// getKWClientInstance 获取 KWClient 实例（单例模式）
+// 返回 KWExecutor 接口，便于测试时 mock
+func getKWClientInstance() common.KWExecutor {
 	if GlobalKWClient == nil {
-
 		url, user, token, err := LoadKWauthInfo()
 
 		if err != nil {
@@ -255,6 +260,16 @@ func getKWClientInstance() *common.KWClient {
 		GlobalKWClient = common.NewKWClient(url, user, token)
 	}
 	return GlobalKWClient
+}
+
+// SetKWClientInstance 设置 KWClient 实例（用于测试）
+func SetKWClientInstance(client common.KWExecutor) {
+	GlobalKWClient = client
+}
+
+// ResetKWClientInstance 重置 KWClient 实例（用于测试）
+func ResetKWClientInstance() {
+	GlobalKWClient = nil
 }
 
 var rootCmd = &cobra.Command{
